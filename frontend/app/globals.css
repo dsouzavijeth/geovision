@@ -1,0 +1,212 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: rgba(17, 24, 39, 0.8);
+  --border-subtle: rgba(99, 179, 237, 0.15);
+  --border-active: rgba(99, 179, 237, 0.4);
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-blue: #63b3ed;
+  --accent-cyan: #22d3ee;
+  --accent-green: #4ade80;
+  --accent-amber: #fbbf24;
+  --accent-red: #f87171;
+  --accent-purple: #a78bfa;
+  --gradient-hero: linear-gradient(135deg, #0a0e1a 0%, #0f172a 40%, #1a1a2e 100%);
+  --shadow-glow: 0 0 30px rgba(99, 179, 237, 0.1);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+code, .mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ------------------------------------------------------------------ */
+/* Page layout                                                         */
+/* ------------------------------------------------------------------ */
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background: var(--gradient-hero);
+}
+
+.main-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 32px;
+  max-width: calc(100vw - 420px);
+}
+
+/* ------------------------------------------------------------------ */
+/* Header                                                              */
+/* ------------------------------------------------------------------ */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.header-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: var(--shadow-glow);
+}
+
+.header h1 {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.header h1 span {
+  color: var(--accent-cyan);
+}
+
+.header-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------------ */
+/* Upload area                                                         */
+/* ------------------------------------------------------------------ */
+
+.upload-zone {
+  border: 2px dashed var(--border-subtle);
+  border-radius: 16px;
+  padding: 48px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(99, 179, 237, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(99, 179, 237, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.upload-zone:hover {
+  border-color: var(--border-active);
+  background: rgba(99, 179, 237, 0.06);
+}
+
+.upload-zone.dragging {
+  border-color: var(--accent-cyan);
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.upload-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.upload-zone h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.upload-zone p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------------ */
+/* Image canvas                                                        */
+/* ------------------------------------------------------------------ */
+
+.canvas-container {
+  flex: 1;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.canvas-container canvas {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* ------------------------------------------------------------------ */
+/* Detection stats bar                                                 */
+/* ------------------------------------------------------------------ */
+
+.stats-bar {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stat-chip .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.stat-chip .count {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ */
+/* CopilotKit sidebar overrides                                        */
+/* ------------------------------------------------------------------ */
+
+.copilotKitSidebar {
+  border-left: 1px solid var(--border-subtle) !important;
+}
