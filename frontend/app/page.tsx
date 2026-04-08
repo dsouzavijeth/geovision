@@ -12,12 +12,10 @@ export default function HomePage() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [results, setResults] = useState<DetectionResults | null>(null);
 
-  const { isLoading } = useCopilotChat();
+  const { isLoading, reset: resetChat } = useCopilotChat();
   const prevLoading = useRef(false);
   const lastUpdatedRef = useRef<number>(0);
 
-  // When a chat request finishes, fetch the latest results from the backend —
-  // but only re-render if the backend timestamp is newer than what we last saw.
   useEffect(() => {
     if (prevLoading.current && !isLoading) {
       fetch("http://127.0.0.1:8000/latest-results")
@@ -34,12 +32,47 @@ export default function HomePage() {
     prevLoading.current = isLoading;
   }, [isLoading]);
 
+  const clearAll = useCallback(async () => {
+    setPreviewUrl(null);
+    setFileName(null);
+    setResults(null);
+    lastUpdatedRef.current = 0;
+
+    // Clear chat history in the CopilotKit UI
+    try {
+      resetChat();
+    } catch (err) {
+      console.error("Failed to reset chat:", err);
+    }
+
+    // Clear the backend session + agent memory
+    try {
+      await fetch("http://127.0.0.1:8000/reset", { method: "POST" });
+    } catch (err) {
+      console.error("Failed to reset backend:", err);
+    }
+  }, [resetChat]);
+
   const handleUpload = useCallback(
     async (base64: string, preview: string, name: string) => {
-      setPreviewUrl(preview);
-      setFileName(name);
+      // Full reset before loading the new image
       setResults(null);
       lastUpdatedRef.current = 0;
+
+      try {
+        resetChat();
+      } catch (err) {
+        console.error("Failed to reset chat:", err);
+      }
+
+      try {
+        await fetch("http://127.0.0.1:8000/reset", { method: "POST" });
+      } catch (err) {
+        console.error("Failed to reset backend:", err);
+      }
+
+      setPreviewUrl(preview);
+      setFileName(name);
 
       try {
         await fetch("http://127.0.0.1:8000/upload-image", {
@@ -51,7 +84,7 @@ export default function HomePage() {
         console.error("Failed to upload image to backend:", err);
       }
     },
-    []
+    [resetChat]
   );
 
   const buttonStyle = {
@@ -101,12 +134,7 @@ export default function HomePage() {
                 Clear results
               </button>
               <button
-                onClick={() => {
-                  setPreviewUrl(null);
-                  setFileName(null);
-                  setResults(null);
-                  lastUpdatedRef.current = 0;
-                }}
+                onClick={clearAll}
                 style={{
                   ...buttonStyle,
                   cursor: "pointer",

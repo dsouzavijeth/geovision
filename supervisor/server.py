@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint
-from supervisor.agent import graph, set_session_image, get_latest_results
+from supervisor.agent import graph, set_session_image, get_latest_results, reset_session
 
 load_dotenv()
 
@@ -37,6 +37,20 @@ class ImagePayload(BaseModel):
 async def upload_image(payload: ImagePayload):
     set_session_image(payload.image_b64)
     return {"status": "ok", "size": len(payload.image_b64)}
+
+
+@app.post("/reset")
+async def reset():
+    """Wipe session image, results, and the agent's checkpointed memory."""
+    reset_session()
+    # Clear the in-memory LangGraph checkpointer so prior conversation is forgotten.
+    try:
+        checkpointer = graph.checkpointer
+        if checkpointer is not None and hasattr(checkpointer, "storage"):
+            checkpointer.storage.clear()
+    except Exception as e:
+        print(f"Warning: could not clear checkpointer storage: {e}")
+    return {"status": "ok"}
 
 
 @app.get("/latest-results")
