@@ -1,6 +1,4 @@
-"""
-Supervisor server — FastAPI + AG-UI endpoint for CopilotKit frontend.
-"""
+"""Supervisor server — FastAPI + AG-UI endpoint for CopilotKit frontend."""
 
 import uvicorn
 from fastapi import FastAPI
@@ -8,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint
-from supervisor.agent import graph, set_session_image
+from supervisor.agent import graph, set_session_image, get_latest_results
 
 load_dotenv()
 
@@ -39,6 +37,11 @@ class ImagePayload(BaseModel):
 async def upload_image(payload: ImagePayload):
     set_session_image(payload.image_b64)
     return {"status": "ok", "size": len(payload.image_b64)}
+
+
+@app.get("/latest-results")
+async def latest_results():
+    return {"results": get_latest_results()}
 
 
 @app.get("/health")

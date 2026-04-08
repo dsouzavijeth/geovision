@@ -15,7 +15,7 @@ User (CopilotKit UI + Image Canvas)
     └── run_segmentation()    ← Modal GPU (YOLOv8n-seg)
 ```
 
-The Supervisor Agent receives user queries plus the uploaded image (base64), decides which model to invoke, calls Modal GPU inference, and returns annotated results that the frontend renders as overlays on the HTML Canvas.
+The Supervisor Agent receives user queries, decides which model to invoke, calls Modal GPU inference, and stores results in a backend session store. The frontend polls for the latest results and renders overlays on the HTML Canvas.
 
 ---
 
@@ -23,12 +23,12 @@ The Supervisor Agent receives user queries plus the uploaded image (base64), dec
 
 | Layer             | Technology                                      |
 |-------------------|------------------------------------------------|
-| Agent framework   | LangGraph                                       |
+| Agent framework   | LangGraph (`create_agent`)                      |
 | Frontend UI       | CopilotKit + Next.js 15                         |
-| Agent protocol    | CopilotKit SDK (FastAPI integration)            |
-| LLM provider      | Nebius (Llama-3.1-70B via OpenAI-compatible API)|
+| Agent protocol    | AG-UI (via `ag_ui_langgraph`)                   |
+| LLM provider      | Nebius Token Factory (`openai/gpt-oss-20b`)     |
 | GPU inference     | Modal.com (A10G)                                |
-| Detection models  | YOLOv8n, YOLOv8n-obb, YOLOv8n-seg             |
+| Detection models  | YOLOv8n, YOLOv8n-obb, YOLOv8n-seg               |
 | Image overlays    | HTML Canvas API                                 |
 
 ---
@@ -59,9 +59,9 @@ uv run modal deploy modal_inference/inference.py
 ```
 
 This creates three serverless GPU endpoints on Modal:
-- `detect_bbox` — axis-aligned bounding boxes (A10G, 4 concurrent)
-- `detect_obb` — oriented bounding boxes (A10G, 4 concurrent)
-- `segment` — instance segmentation (A10G, 2 concurrent)
+- `detect_bbox` — axis-aligned bounding boxes (A10G, max 4 containers)
+- `detect_obb` — oriented bounding boxes (A10G, max 4 containers)
+- `segment` — instance segmentation (A10G, max 2 containers)
 
 ### 3. Run the backend
 
@@ -91,24 +91,27 @@ http://localhost:3000
 
 1. **Upload** a satellite/aerial image (JPEG, PNG, GeoTIFF — max 20MB)
 2. **Ask questions** in the chat sidebar:
-   - "How many vehicles are in the parking lot?"
-   - "Detect all buildings"
-   - "Show me objects at an angle" (uses oriented bounding boxes)
-   - "Highlight building boundaries" (uses segmentation)
-   - "Do a full analysis" (runs both detection + segmentation)
+   - "Detect the aircraft" (uses standard bounding boxes)
+   - "Give me OBB for the aircraft" (uses oriented bounding boxes — best for aerial imagery)
+   - "Segment the buildings" (uses instance segmentation)
+   - "How many vehicles are there?"
 3. **View results** overlaid on the image with colored bounding boxes or polygon masks
-4. **Ask follow-ups** — "Which objects had the highest confidence?" — without re-running inference
+4. **Ask follow-ups** — the agent answers from conversation history without re-running inference
+
+> **Tip:** For aerial/satellite imagery, the OBB model (YOLOv8n-obb, trained on DOTA) performs dramatically better than the standard bbox model (YOLOv8n, trained on COCO). Always prefer OBB for aircraft, vehicles, and ships viewed from above.
 
 ---
 
 ## Endpoints
 
-| Endpoint                     | Description                          |
-|------------------------------|--------------------------------------|
-| `GET http://localhost:8000/health` | Health check                    |
-| `POST http://localhost:8000/copilotkit` | CopilotKit agent endpoint  |
+| Endpoint                              | Description                                   |
+|---------------------------------------|-----------------------------------------------|
+| `GET  /health`                        | Health check                                  |
+| `POST /upload-image`                  | Stores the current session's image (base64)   |
+| `GET  /latest-results`                | Returns the most recent detection/seg results |
+| `POST /copilotkit`                    | AG-UI agent endpoint used by CopilotKit       |
 
-Frontend proxies through:
+Frontend proxies CopilotKit traffic through:
 ```
 http://localhost:3000/api/copilotkit → http://127.0.0.1:8000/copilotkit
 ```
@@ -121,16 +124,10 @@ http://localhost:3000/api/copilotkit → http://127.0.0.1:8000/copilotkit
 geovision/
 ├── supervisor/
 │   ├── __init__.py
-│   ├── agent.py              # LangGraph supervisor with detection + segmentation tools
-│   └── server.py             # FastAPI + CopilotKit endpoint
-├── detector_agent/
-│   ├── __init__.py
-│   ├── agent.py              # Detector agent definition
-│   └── tools.py              # detect_objects, detect_oriented_objects
-├── segmentation_agent/
-│   ├── __init__.py
-│   ├── agent.py              # Segmentation agent definition
-│   └── tools.py              # segment_objects
+│   ├── agent.py              # LangGraph supervisor + detection/segmentation tools
+│   └── server.py             # FastAPI + AG-UI endpoint + session routes
+├── detector_agent/           # (reserved for future standalone agent split)
+├── segmentation_agent/       # (reserved for future standalone agent split)
 ├── modal_inference/
 │   ├── __init__.py
 │   ├── inference.py          # Modal GPU functions (deploy to cloud)
@@ -141,7 +138,7 @@ geovision/
 │   │   │   └── route.ts      # Next.js → supervisor proxy
 │   │   ├── globals.css
 │   │   ├── layout.tsx
-│   │   └── page.tsx          # Main page with state management
+│   │   └── page.tsx          # Main page with upload, canvas, and polling
 │   ├── components/
 │   │   ├── ImageCanvas.tsx   # HTML Canvas overlay renderer
 │   │   ├── ImageUpload.tsx   # Drag & drop upload with base64 conversion
@@ -157,34 +154,50 @@ geovision/
 
 ## How It Works
 
-1. User uploads an image → converted to base64, stored in React state
-2. CopilotKit makes the base64 available to the agent via `useCopilotReadable`
-3. User asks a question → Supervisor agent decides which tool to call
-4. Tool calls Modal GPU function remotely → YOLOv8 runs inference → returns JSON
-5. Supervisor calls `displayResults` action → frontend receives detection JSON
-6. `ImageCanvas` component draws bounding boxes / polygons over the original image
-7. `StatsBar` shows object counts by category
-8. Follow-up questions use cached results from `useCopilotReadable` — no re-inference
+1. User uploads an image → frontend converts it to base64 and POSTs to `/upload-image`
+2. Backend stores the base64 in a module-level `SESSION_IMAGE` dict
+3. User asks a question in chat → CopilotKit forwards the message through `/api/copilotkit` → AG-UI endpoint → Supervisor Agent
+4. Supervisor decides which tool to call (`run_detection` with `bbox`/`obb` mode, or `run_segmentation`)
+5. The tool reads the image from `SESSION_IMAGE`, calls the corresponding Modal GPU function, and stores the full result in `LATEST_RESULTS`
+6. The tool returns only a small summary (counts by category) to the LLM — never raw coordinates — so the model produces a clean natural-language reply
+7. Frontend watches `isLoading` from `useCopilotChat`; when the turn finishes, it fetches `/latest-results` and hands the JSON to the `ImageCanvas` component
+8. `ImageCanvas` draws bounding boxes, oriented boxes, or polygon masks over the original image; `StatsBar` renders count chips
+
+This approach keeps the (potentially multi-MB) base64 image out of LLM tool-call arguments entirely, which avoids the token bloat and base64 corruption issues you'd hit otherwise.
 
 ---
 
 ## Quick Checks
 
-```bash
-# Health check
-curl http://localhost:8000/health
+```powershell
+# Health check (Windows PowerShell)
+irm http://localhost:8000/health
 
-# Test Modal functions directly
-modal run modal_inference/inference.py::detect_bbox --image-b64 "..."
+# See the latest cached results
+irm http://localhost:8000/latest-results
+```
+
+```bash
+# Same, on macOS/Linux
+curl http://localhost:8000/health
+curl http://localhost:8000/latest-results
 ```
 
 ---
 
 ## Environment Variables
 
-| Variable          | Description                    |
-|-------------------|-------------------------------|
-| `NEBIUS_API_KEY`  | Nebius Token Factory API key  |
-| Modal credentials | Set via `modal token set` CLI |
+| Variable          | Description                                       |
+|-------------------|---------------------------------------------------|
+| `NEBIUS_API_KEY`  | Nebius Token Factory API key                      |
+| Modal credentials | Set via `uv run modal setup` (stored by Modal CLI)|
 
 ---
+
+## Notes on Model Choice
+
+- **YOLOv8n (COCO)** — 80 everyday classes. Fine for ground-level photos, weak on aerial imagery.
+- **YOLOv8n-obb (DOTA)** — trained specifically on aerial/satellite data. Catches aircraft, vehicles, and ships that the COCO model misses entirely. **Use this for geospatial work.**
+- **YOLOv8n-seg (COCO)** — instance segmentation with 80 COCO classes.
+
+If you need higher accuracy, swap `yolov8n*.pt` for `yolov8x*.pt` in `modal_inference/inference.py` and redeploy. The `n` (nano) variants are used by default for speed and minimal GPU memory.
