@@ -5,9 +5,9 @@ Deploy with:
     modal deploy modal_inference/inference.py
 
 This creates three serverless GPU endpoints:
-    - detect_bbox: axis-aligned bounding boxes (YOLOv8n)
-    - detect_obb: oriented bounding boxes (YOLOv8n-obb)
-    - segment: instance segmentation (YOLOv8n-seg)
+    - detect_bbox: axis-aligned bounding boxes (YOLO26n)
+    - detect_obb: oriented bounding boxes (YOLO26n-obb)
+    - segment: instance segmentation (YOLO26n-seg)
 """
 
 import modal
@@ -16,7 +16,7 @@ image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("libgl1", "libglib2.0-0")
     .pip_install(
-        "ultralytics>=8.3.0",
+        "ultralytics>=8.4.0",
         "opencv-python-headless>=4.10.0",
         "Pillow>=10.0.0",
         "numpy>=1.26.0",
@@ -45,10 +45,10 @@ def _decode_image(base64_str: str):
 
 @app.function(gpu="A10G", max_containers=4, timeout=120)
 def detect_bbox(image_b64: str, conf: float = 0.25) -> dict:
-    """Run YOLOv8n detection, return axis-aligned bounding boxes."""
+    """Run YOLO26n detection, return axis-aligned bounding boxes."""
     from ultralytics import YOLO
 
-    model = YOLO("yolov8n.pt")
+    model = YOLO("yolo26n.pt")
     img = _decode_image(image_b64)
     results = model.predict(source=img, conf=conf, verbose=False)
 
@@ -80,11 +80,11 @@ def detect_bbox(image_b64: str, conf: float = 0.25) -> dict:
 
 @app.function(gpu="A10G", max_containers=4, timeout=120)
 def detect_obb(image_b64: str, conf: float = 0.25) -> dict:
-    """Run YOLOv8n-obb detection, return oriented bounding boxes."""
+    """Run YOLO26n-obb detection, return oriented bounding boxes."""
     from ultralytics import YOLO
     import numpy as np
 
-    model = YOLO("yolov8n-obb.pt")
+    model = YOLO("yolo26n-obb.pt")
     img = _decode_image(image_b64)
     results = model.predict(source=img, conf=conf, verbose=False)
 
@@ -116,10 +116,10 @@ def detect_obb(image_b64: str, conf: float = 0.25) -> dict:
 
 @app.function(gpu="A10G", max_containers=2, timeout=180)
 def segment(image_b64: str, conf: float = 0.25) -> dict:
-    """Run YOLOv8n-seg, return polygon masks."""
+    """Run YOLO26n-seg, return polygon masks."""
     from ultralytics import YOLO
 
-    model = YOLO("yolov8n-seg.pt")
+    model = YOLO("yolo26n-seg.pt")
     img = _decode_image(image_b64)
     results = model.predict(source=img, conf=conf, verbose=False)
 

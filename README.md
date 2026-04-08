@@ -11,8 +11,8 @@ User (CopilotKit UI + Image Canvas)
         │
         ▼
   Supervisor Agent            ← LangGraph orchestrator
-    ├── run_detection()       ← Modal GPU (YOLOv8n / YOLOv8n-obb)
-    ├── run_segmentation()    ← Modal GPU (YOLOv8n-seg)
+    ├── run_detection()       ← Modal GPU (YOLO26n / YOLO26n-obb)
+    ├── run_segmentation()    ← Modal GPU (YOLO26n-seg)
     ├── filter_results()      ← in-memory label filter
     └── reset_filter()        ← restore full results
 ```
@@ -30,7 +30,7 @@ The Supervisor Agent receives user queries, decides which model to invoke, calls
 | Agent protocol    | AG-UI (via `ag_ui_langgraph`)                   |
 | LLM provider      | Nebius Token Factory (`openai/gpt-oss-20b`)     |
 | GPU inference     | Modal.com (A10G)                                |
-| Detection models  | YOLOv8n, YOLOv8n-obb, YOLOv8n-seg               |
+| Detection models  | YOLO26n, YOLO26n-obb, YOLO26n-seg               |
 | Image overlays    | HTML Canvas API                                 |
 
 ---
@@ -103,7 +103,7 @@ http://localhost:3000
    - "Show everything" / "Reset" → restores the full result set
 4. **Clear the overlay** with the *Clear results* button (keeps the image) or start over with *Upload new image* (clears image, canvas, chat history, and agent memory).
 
-> **Tip:** For aerial/satellite imagery, the OBB model (YOLOv8n-obb, trained on DOTA) performs better than the standard bbox model (YOLOv8n, trained on COCO). Always prefer OBB for aircraft, vehicles, and ships viewed from above.
+> **Tip:** For aerial/satellite imagery, the OBB model (YOLO26n-obb, trained on DOTA) performs better than the standard bbox model (YOLO26n, trained on COCO). Always prefer OBB for aircraft, vehicles, and ships viewed from above.
 
 ---
 
@@ -130,8 +130,8 @@ The Supervisor Agent has four tools registered with LangGraph:
 
 | Tool               | Purpose                                                              |
 |--------------------|----------------------------------------------------------------------|
-| `run_detection`    | Calls Modal YOLOv8n or YOLOv8n-obb — writes to `ORIGINAL_RESULTS`    |
-| `run_segmentation` | Calls Modal YOLOv8n-seg — writes to `ORIGINAL_RESULTS`               |
+| `run_detection`    | Calls Modal YOLO26n or YOLO26n-obb — writes to `ORIGINAL_RESULTS`    |
+| `run_segmentation` | Calls Modal YOLO26n-seg — writes to `ORIGINAL_RESULTS`               |
 | `filter_results`   | Filters `ORIGINAL_RESULTS` by label, updates displayed view only     |
 | `reset_filter`     | Restores the displayed view to the full `ORIGINAL_RESULTS`           |
 
@@ -230,8 +230,8 @@ curl -X POST http://localhost:8000/reset
 
 ## Notes on Model Choice
 
-- **YOLOv8n (COCO)** — 80 everyday classes. Fine for ground-level photos, weak on aerial imagery.
-- **YOLOv8n-obb (DOTA)** — trained specifically on aerial/satellite data. Catches aircraft, vehicles, and ships that the COCO model misses entirely. **Use this for geospatial work.**
-- **YOLOv8n-seg (COCO)** — instance segmentation with 80 COCO classes.
+- **YOLO26n (COCO)** — 80 everyday classes. Fine for ground-level photos, weak on aerial imagery.
+- **YOLO26n-obb (DOTA)** — trained specifically on aerial/satellite data. Catches aircraft, vehicles, and ships that the COCO model misses entirely. **Use this for geospatial work.**
+- **YOLO26n-seg (COCO)** — instance segmentation with 80 COCO classes.
 
-If you need higher accuracy, swap `yolov8n*.pt` for `yolov8x*.pt` in `modal_inference/inference.py` and redeploy. The `n` (nano) variants are used by default for speed and minimal GPU memory.
+If you need higher accuracy, swap `yolo26n*.pt` for `yolo26x*.pt` in `modal_inference/inference.py` and redeploy. The `n` (nano) variants are used by default for speed and minimal GPU memory.
