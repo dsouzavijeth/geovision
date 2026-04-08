@@ -41,7 +41,7 @@ async def upload_image(payload: ImagePayload):
 
 @app.get("/latest-results")
 async def latest_results():
-    return {"results": get_latest_results()}
+    return get_latest_results()
 
 
 @app.get("/health")

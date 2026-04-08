@@ -14,14 +14,18 @@ export default function HomePage() {
 
   const { isLoading } = useCopilotChat();
   const prevLoading = useRef(false);
+  const lastUpdatedRef = useRef<number>(0);
 
-  // When a chat request finishes, fetch the latest results from the backend
+  // When a chat request finishes, fetch the latest results from the backend —
+  // but only re-render if the backend timestamp is newer than what we last saw.
   useEffect(() => {
     if (prevLoading.current && !isLoading) {
       fetch("http://127.0.0.1:8000/latest-results")
         .then((r) => r.json())
         .then((data) => {
-          if (data.results) {
+          const updatedAt = data.updated_at ?? 0;
+          if (data.results && updatedAt > lastUpdatedRef.current) {
+            lastUpdatedRef.current = updatedAt;
             setResults(data.results as DetectionResults);
           }
         })
@@ -35,6 +39,7 @@ export default function HomePage() {
       setPreviewUrl(preview);
       setFileName(name);
       setResults(null);
+      lastUpdatedRef.current = 0;
 
       try {
         await fetch("http://127.0.0.1:8000/upload-image", {
@@ -100,6 +105,7 @@ export default function HomePage() {
                   setPreviewUrl(null);
                   setFileName(null);
                   setResults(null);
+                  lastUpdatedRef.current = 0;
                 }}
                 style={{
                   ...buttonStyle,
