@@ -2,7 +2,7 @@
 
 import os
 from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 
 
 def make_model():
@@ -17,8 +17,8 @@ def make_model():
 DETECTOR_PROMPT = """You are a Detection Agent specialized in geospatial object detection.
 
 You have two detection tools:
-1. detect_objects — standard axis-aligned bounding boxes (YOLOv8)
-2. detect_oriented_objects — oriented/rotated bounding boxes (YOLOv8-OBB)
+1. detect_objects — standard axis-aligned bounding boxes (YOLO26)
+2. detect_oriented_objects — oriented/rotated bounding boxes (YOLO26-OBB)
 
 When you receive a request:
 - If the user asks about objects at angles, rotated, tilted, on roads/runways → use detect_oriented_objects
@@ -38,9 +38,9 @@ def create_detector_agent():
     from detector_agent.tools import get_detector_tools
 
     tools = get_detector_tools()
-    agent = create_react_agent(
+    agent = create_agent(
         make_model(),
         tools=tools,
-        prompt=DETECTOR_PROMPT,
+        system_prompt=DETECTOR_PROMPT,
     )
     return agent

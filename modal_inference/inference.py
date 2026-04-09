@@ -1,5 +1,5 @@
 """
-Modal GPU functions for YOLOv8 inference.
+Modal GPU functions for YOLO26 inference.
 
 Deploy with:
     modal deploy modal_inference/inference.py

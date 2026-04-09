@@ -2,7 +2,7 @@
 
 import os
 from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 
 
 def make_model():
@@ -17,7 +17,7 @@ def make_model():
 SEGMENTATION_PROMPT = """You are a Segmentation Agent specialized in instance segmentation of geospatial imagery.
 
 You have one tool:
-- segment_objects — runs YOLOv8-seg to produce polygon masks for every detected object
+- segment_objects — runs YOLO26-seg to produce polygon masks for every detected object
 
 When you receive a request:
 - Run segmentation immediately using the provided base64 image
@@ -36,9 +36,9 @@ def create_segmentation_agent():
     from segmentation_agent.tools import get_segmentation_tools
 
     tools = get_segmentation_tools()
-    agent = create_react_agent(
+    agent = create_agent(
         make_model(),
         tools=tools,
-        prompt=SEGMENTATION_PROMPT,
+        system_prompt=SEGMENTATION_PROMPT,
     )
     return agent
