@@ -2,10 +2,6 @@
 
 A conversational geospatial image analysis tool. Upload a satellite or aerial image, ask natural language questions, and get AI-powered object detection and segmentation results overlaid directly on your image.
 
-## Demo
-
-https://github.com/user-attachments/assets/262f9ebf-a8d4-434f-aa75-36fd9d2791bc
-
 ---
 
 ## Architecture
@@ -151,8 +147,6 @@ geovision/
 │   ├── __init__.py
 │   ├── agent.py              # LangGraph supervisor + 4 tools + session stores
 │   └── server.py             # FastAPI + AG-UI endpoint + /upload-image /reset /latest-results
-├── detector_agent/           # (reserved for future standalone agent split)
-├── segmentation_agent/       # (reserved for future standalone agent split)
 ├── modal_inference/
 │   ├── __init__.py
 │   ├── inference.py          # Modal GPU functions (deploy to cloud)
