@@ -6,6 +6,8 @@ A conversational geospatial image analysis tool. Upload a satellite or aerial im
 
 https://github.com/user-attachments/assets/262f9ebf-a8d4-434f-aa75-36fd9d2791bc
 
+**Deep-dive article:** [Building GeoVision — full build journey on Medium](https://medium.com/@dsouzavijeth/building-geovision-a-conversational-geospatial-image-analysis-tool-with-langgraph-copilotkit-and-717903ad8868)
+
 ---
 
 ## Architecture
